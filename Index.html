@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UP Lecturer Mechanical – Question Tracker (2021)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root{
+  --yellow:#FFDE03;
+  --pink:#FF52A2;
+  --green:#3BFF7A;
+  --black:#000;
+  --white:#fff;
+}
+
+*{
+  box-sizing:border-box;
+  font-family:Arial, Helvetica, sans-serif;
+}
+
+body{
+  margin:0;
+  padding:16px;
+  background:var(--white);
+}
+
+/* ================= DASHBOARD ================= */
+.dashboard{
+  border:4px solid var(--black);
+  box-shadow:12px 12px 0 var(--black);
+  padding:16px;
+  margin-bottom:24px;
+}
+
+.progress-bar{
+  height:22px;
+  border:3px solid var(--black);
+  margin:10px 0;
+}
+
+.progress-fill{
+  height:100%;
+  width:0%;
+  background:var(--yellow);
+  transition:width 0.4s ease;
+}
+
+.reset{
+  background:var(--pink);
+  border:3px solid var(--black);
+  padding:6px 12px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* ================= GRID ================= */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:18px;
+}
+
+/* ================= SUBJECT CARD ================= */
+.subject{
+  border:4px solid var(--black);
+  box-shadow:10px 10px 0 var(--black);
+}
+
+.subject.complete > .head{
+  background:var(--green);
+}
+
+.head{
+  background:var(--yellow);
+  padding:12px;
+  font-weight:bold;
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+}
+
+.body{
+  padding:12px;
+  display:none;
+}
+
+.q{
+  display:flex;
+  gap:8px;
+  margin-bottom:6px;
+  font-size:13px;
+}
+
+/* ================= TOOLTIP ================= */
+.tooltip{
+  position:fixed;
+  background:#000;
+  color:#fff;
+  padding:6px 8px;
+  font-size:12px;
+  display:none;
+  z-index:999;
+  pointer-events:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="dashboard">
+  <h2>📘 UP Lecturer Mechanical – Verified Tracker (2021)</h2>
+
+  <div>
+    <b>Progress:</b>
+    <span id="done">0</span> /
+    <span id="total">0</span>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="pf"></div>
+  </div>
+
+  <div>
+    <b>Pending Questions (Ascending):</b>
+    <span id="pending"></span>
+  </div><br>
+
+  <button class="reset" onclick="resetAll()">RESET REVISION</button>
+</div>
+
+<div class="grid" id="grid"></div>
+<div class="tooltip" id="tt"></div>
+
+<script>
+/* ================= VERIFIED DATA ================= */
+
+const DATA = {
+"Paper-1: Engineering Mechanics":[
+[30,"Dynamics – Rolling Disc Kinetic Energy Ratio"],
+[31,"Kinematics – Rectilinear motion velocity/acceleration"],
+[41,"Statics – Unbalanced couple reactions"],
+[42,"Statics – Resultant of equal forces angle"],
+[43,"Dynamics – Angular momentum / plastic impact"],
+[51,"Properties of area – Polar MOI (circle)"],
+[71,"Statics – Suspended ball force analysis"],
+[73,"Truss – Member force / stress limit"],
+[80,"Statics – String force calculation"],
+[85,"Dynamics – Acceleration of body moving up"],
+[86,"Properties of area – CG of hemisphere"],
+[97,"Kinematics – Rod angular velocity"],
+[101,"Statics – Resultant of four forces"],
+[102,"Friction – Block slip condition"],
+[110,"Kinematics – Rolling disc point velocity"]
+],
+
+"Paper-1: Strength of Materials":[
+[35,"Properties – Resilience & toughness"],
+[37,"Beams – Propped cantilever reaction"],
+[46,"Stress – Eccentric loading"],
+[47,"Pressure vessels – Thin cylinder max shear"],
+[52,"Stress–strain – True vs engineering strain"],
+[55,"Thermal stress – Buckling due to heating"],
+[66,"Beams – Flexural rigidity ratio"],
+[79,"Thick cylinder – Hoop stress"],
+[87,"Properties – Poisson ratio (incompressible)"],
+[92,"Buckling – Truss member critical load"],
+[93,"Beams – Bending moment"],
+[96,"Stress–strain – Hydrostatic volume change"],
+[106,"Plasticity – Linear hardening true stress"],
+[109,"Beams – Cantilever slope"]
+],
+
+"Paper-1: Theory of Machines":[
+[33,"Mechanisms – Coriolis component"],
+[44,"Gears – Interference / minimum teeth"],
+[45,"Vibrations – Transmissibility"],
+[53,"Flywheel – Energy fluctuation"],
+[54,"Vibrations – Damping factor"],
+[63,"Gears – Epicyclic gear train"],
+[65,"Flywheel – Coefficient of fluctuation"],
+[70,"Governors – Sleeve friction"],
+[84,"Balancing – Secondary crank"],
+[88,"Mechanisms – Four-bar velocity"],
+[89,"Vibrations – Natural frequency"],
+[104,"Balancing – Hammer blow"],
+[113,"Cams – Offset follower"],
+[115,"Mechanisms – IC method (six-link)"],
+[117,"Flywheel – Mass moment of inertia"],
+[119,"Cams – Contact constraint"],
+[122,"Vibrations – Rolling disc system"],
+[124,"Mechanisms – Slider crank velocity"]
+],
+
+"Paper-1: Machine Design":[
+[26,"Gears – Applications"],
+[27,"Bearings – Tapered roller bearing"],
+[34,"Clutch – Torque capacity"],
+[39,"Failure theories – Conservative fatigue"],
+[49,"Bearings – Flat pivot friction"],
+[58,"Failure theories – Mild steel"],
+[74,"Rivets – Boiler plate rivet head"],
+[98,"Fatigue – Endurance limit"],
+[114,"Welded joints – Fillet weld throat"],
+[121,"Belt drive – Power transmission"],
+[123,"Riveted joints – Eccentric loading"]
+],
+
+"Paper-1: Material Science":[
+[28,"Hardness – Brinell hardness number"],
+[32,"Hardness – Microhardness / Knoop"],
+[40,"Phase diagram – Eutectic system"],
+[50,"Crystal structure – HCP effective atoms"],
+[59,"Crystal structure – Packing efficiency"],
+[64,"Alloying – High temperature strength"],
+[69,"Properties – Corrosion resistance"],
+[82,"Crystal structure – Coordination number"],
+[83,"Heat treatment – Process vs effect"],
+[91,"Properties – Yield strength after hardening"],
+[99,"Alloys – German silver"],
+[103,"Composites – Cemented carbide binder"],
+[112,"Alloys – Babbit metal"]
+],
+
+"Paper-1: Manufacturing":[
+[38,"USM – Workpiece material suitability"],
+[48,"EDM – Most important parameter"],
+[56,"Machining – Drilling glass (USM)"],
+[57,"Casting – Centrifugal impurity location"],
+[90,"EDM – Dielectric fluid"],
+[94,"Jigs & fixtures – 3-2-1 principle"],
+[95,"Casting – Ornament method"],
+[105,"ECM – Application"],
+[116,"Cutting tools – Back rake angle"],
+[118,"Metrology – Surface smoothness"]
+],
+
+"Paper-1: Industrial Engineering":[
+[36,"Quality control – Control charts"],
+[67,"Forecasting – Technique identification"],
+[68,"Break-even analysis"],
+[81,"Inventory – ABC analysis (A items)"],
+[107,"Operations research – Optimization"],
+[108,"Inventory – ABC usage"],
+[111,"Quality control – P-chart"]
+],
+
+"Paper-1: Mechatronics":[
+[29,"Microprocessor – Instruction vs machine cycle"],
+[72,"Microprocessor – 32-bit operations"],
+[100,"Robotics – 7 DOF usage"],
+[120,"Motors – Stepper motor step angle"]
+],
+
+"Paper-1: IC Engine (Dynamics)":[
+[125,"Turning moment diagram"]
+], "Paper-2: Fluid Mechanics":[
+[26,"Grashof number"],
+[34,"Entry length"],
+[35,"Laminar boundary layer thickness"],
+[44,"Turbulent pressure drop"],
+[47,"Cavitation"],
+[50,"Centre of pressure (rectangle)"],
+[55,"Pascal law"],
+[66,"Friction factor"],
+[73,"Stream function"],
+[81,"Velocity from stream function"],
+[84,"Venturimeter"],
+[85,"Buoyancy"],
+[94,"Laminar pressure drop"],
+[98,"Acceleration field"],
+[103,"Pitot tube"],
+[107,"Dimensionless numbers"],
+[114,"Floating stability"],
+[123,"Vmax / Vavg"]
+],
+"Paper-1: Other / Non-Mechanical Slots":[
+[60,"Paper slot – no Mechanical question"],
+[61,"Paper slot – no Mechanical question"],
+[62,"Paper slot – no Mechanical question"]
+],
+
+"Paper-2: Thermodynamics":[
+[31,"Heat engine driving refrigerator"],
+[32,"First law (closed system)"],
+[38,"Process identification"],
+[53,"Entropy change (adiabatic)"],
+[57,"Polytropic process"],
+[59,"Engines in series"],
+[60,"Isothermal entropy"],
+[65,"Heat pump COP"],
+[71,"Otto cycle efficiency"],
+[75,"Carnot engine entropy"],
+[79,"Second law"],
+[89,"Availability / irreversibility"],
+[92,"Critical point properties"],
+[93,"dQ/T = 0 analysis"],
+[101,"P–V to T–S conversion"],
+[112,"Availability function"],
+[116,"Maxwell relations"],
+[118,"Steam valve velocity"]
+],
+
+"Paper-2: Heat Transfer":[
+[30,"Fins – Condition for increasing heat transfer"],
+[36,"Heat exchanger – Counter-flow effectiveness"],
+[42,"Critical radius of insulation (sphere)"],
+[45,"Internal heat generation (cylindrical rod)"],
+[51,"Thermal conductivity"],
+[56,"Composite wall – Equivalent conductivity"],
+[70,"Radiation – View factor (cylinder)"],
+[72,"Radiation – Shape factor algebra"],
+[74,"Heat exchanger – LMTD"],
+[77,"Thermal diffusivity"],
+[82,"Convection – Nusselt (Dittus–Boelter)"],
+[87,"Solar constant"],
+[88,"Free convection flow profile"],
+[95,"Fins – Insulation effect / Biot number"],
+[96,"Liquid metals – Boundary layer"],
+[99,"Fins – Effectiveness"],
+[105,"Thermal boundary layer"],
+[108,"Critical radius (wire enamel)"],
+[109,"Convection – Nu = 4.36"],
+[115,"Conduction – Temperature profile"],
+[124,"Pin fin efficiency"],
+[125,"Radiation – Gray body absorptivity"]
+],
+
+"Paper-2: Fluid Machinery":[
+[28,"Centrifugal pump – Power vs diameter"],
+[39,"Turbine cavitation location"],
+[40,"Pelton wheel – Bucket to jet ratio"],
+[62,"Impulse turbine – Speed ratio"],
+[76,"Unit discharge"],
+[91,"Centrifugal pump – Specific speed"]
+],
+
+"Paper-2: Turbomachinery":[
+[33,"Axial flow compressor – Degree of reaction"],
+[48,"Centrifugal compressor – Radial blade work"],
+[80,"Reciprocating compressor – Multistaging"],
+[97,"Reciprocating compressor – Volumetric efficiency"],
+[102,"Compressor – Minimum work"],
+[120,"Reciprocating compressor – Clearance ratio"]
+],
+
+"Paper-2: RAC":[
+[37,"Human comfort – Effective temperature"],
+[46,"Aircraft refrigeration"],
+[52,"COP comparison (AC vs refrigerator)"],
+[58,"Refrigeration cycle – Max vs critical temp"],
+[67,"AC plant capacity"],
+[78,"Sensible heat infiltration"],
+[104,"Refrigerants – Max latent heat"],
+[111,"Refrigerant R-134a"]
+],
+
+"Paper-2: Psychrometry":[
+[49,"Heating & humidification"],
+[61,"Cooling tower – Minimum cooling limit"],
+[64,"RH vs WBT / enthalpy"],
+[83,"Supply air humidity from RSHF"],
+[100,"Dehumidification – Chemical process"],
+[106,"Air washer functions"],
+[117,"Wet bulb depression zero"]
+],
+
+"Paper-2: IC Engines":[
+[54,"Spark plug gap"],
+[68,"Octane number"],
+[86,"Knocking – CI engine"],
+[113,"Compression ratio vs efficiency"],
+[119,"Emissions – Air–fuel ratio"]
+],
+
+"Paper-2: Power Plant":[
+[41,"Stoichiometry – Oxygen for carbon"],
+[43,"Coal quality"],
+[69,"Gas turbine – Air–fuel ratio"],
+[110,"Condenser – Partial pressure of air"],
+[121,"Dryness fraction"],
+[122,"Nozzles – C–D design"]
+],
+
+"Paper-2: Gas Dynamics":[
+[27,"Jet velocity vs plane velocity"],
+[29,"Normal shock – Stagnation temperature"],
+[63,"Supersonic flow – Area relation"],
+[90,"Mach cone angle"]
+]
+, 
+
+/* 🔹 Explicit Paper-2 slots with no Mechanical question */
+"Paper-2: Other / Non-Mechanical Slots":[
+[75,"Paper slot – no Mechanical question"],
+[76,"Paper slot – no Mechanical question"],
+[77,"Paper slot – no Mechanical question"],
+[78,"Paper slot – no Mechanical question"]
+]
+};
+
+/* ================= LOGIC ================= */
+
+const grid=document.getElementById("grid");
+const pf=document.getElementById("pf");
+const pendingEl=document.getElementById("pending");
+const tt=document.getElementById("tt");
+
+function load(){
+  grid.innerHTML="";
+  let total=0,done=0,pending=[];
+
+  for(const subject in DATA){
+    const card=document.createElement("div");
+    card.className="subject";
+
+    const head=document.createElement("div");
+    head.className="head";
+    head.innerHTML=`${subject} <span>${DATA[subject].length}</span>`;
+
+    const body=document.createElement("div");
+    body.className="body";
+
+    let subjectComplete=true;
+
+    DATA[subject].forEach(q=>{
+      total++;
+      const key=subject+"_"+q[0];
+      const checked=localStorage.getItem(key)==="1";
+
+      if(checked) done++;
+      else pending.push(q[0]);
+
+      if(!checked) subjectComplete=false;
+
+      const row=document.createElement("div");
+      row.className="q";
+      row.innerHTML=`
+        <input type="checkbox" ${checked?"checked":""}
+          onchange="toggle('${key}')">
+        <span data-desc="Q${q[0]} – ${q[1]}">
+          Q${q[0]} – ${q[1]}
+        </span>`;
+      body.appendChild(row);
+    });
+
+    if(subjectComplete) card.classList.add("complete");
+
+    head.onclick=()=>body.style.display=
+      body.style.display==="none"?"block":"none";
+
+    card.append(head,body);
+    grid.appendChild(card);
+  }
+
+  pending.sort((a,b)=>a-b);
+  document.getElementById("done").textContent=done;
+  document.getElementById("total").textContent=total;
+  pf.style.width=(done/total*100).toFixed(1)+"%";
+  pendingEl.textContent=pending.length?pending.join(", "):"None 🎉";
+}
+
+function toggle(key){
+  localStorage.setItem(
+    key,
+    localStorage.getItem(key)==="1"?"0":"1"
+  );
+  load();
+}
+
+function resetAll(){
+  if(confirm("Reset all progress?")){
+    localStorage.clear();
+    load();
+  }
+}
+
+/* Tooltip engine */
+document.addEventListener("mousemove",e=>{
+  if(tt.style.display==="block"){
+    tt.style.left=e.clientX+12+"px";
+    tt.style.top=e.clientY+12+"px";
+  }
+});
+document.addEventListener("mouseover",e=>{
+  if(e.target.dataset.desc){
+    tt.textContent=e.target.dataset.desc;
+    tt.style.display="block";
+  }
+});
+document.addEventListener("mouseout",()=>tt.style.display="none");
+
+load();
+</script>
+
+</body>
+</html>
